@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Omron Hospital Approaching Flow</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: one 1280x800 swimlane canvas (Hedima | Omron | Clinical | Communications | BOD & Procurement) across 8 stages, scaled to fit; hospital status strip below; step detail panel on the right. */
+:root{
+  --bg:#FFFFFF; --surface:#F2F6F7; --ink:#0E1A2B; --muted:#5B6878; --line:#CDD6DE; --wire:#A7B3BF;
+  --blue:#0447C3; --blue-soft:#E7EEFB; --green:#06925A; --green-soft:#E2F5EB;
+  --red:#D9483F; --red-soft:#FDECEA; --amber:#B7791F; --amber-soft:#FFF5E3; --amber-ink:#7A4E0E;
+  --plate:#FFFFFF; --on-accent:#FFFFFF; --shadow:rgba(4,71,195,.14);
+  --display:"Be Vietnam Pro","Manrope",Arial,sans-serif; --body:"Manrope","Be Vietnam Pro",Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0C1420; --surface:#142030; --ink:#E5ECF4; --muted:#93A2B4; --line:#2A3A4E; --wire:#4A5B70;
+  --blue:#86A8FF; --blue-soft:#17264A; --green:#4FD08E; --green-soft:#0F2E22;
+  --red:#FF7E74; --red-soft:#3A1D1F; --amber:#E5AA4E; --amber-soft:#2E2415; --amber-ink:#F2CD8E;
+  --plate:#F4F7FA; --on-accent:#0C1420; --shadow:rgba(0,0,0,.45); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0C1420; --surface:#142030; --ink:#E5ECF4; --muted:#93A2B4; --line:#2A3A4E; --wire:#4A5B70;
+  --blue:#86A8FF; --blue-soft:#17264A; --green:#4FD08E; --green-soft:#0F2E22;
+  --red:#FF7E74; --red-soft:#3A1D1F; --amber:#E5AA4E; --amber-soft:#2E2415; --amber-ink:#F2CD8E;
+  --plate:#F4F7FA; --on-accent:#0C1420; --shadow:rgba(0,0,0,.45); color-scheme:dark}
+html,body{height:100%;background:var(--bg)}
+body{margin:0;box-sizing:border-box;padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));font-family:var(--body);color:var(--ink);overflow:hidden}
+.viewport{width:100%;height:100%;position:relative}
+.stage{width:1280px;height:800px;transform-origin:top left;position:absolute;top:0;left:0;background:var(--bg);overflow:hidden}
+.top,.flow,.bot{position:absolute;width:1280px;left:0}
+.top{top:0;height:96px}
+.flow{top:0;height:800px;pointer-events:none}
+.flow>*{pointer-events:auto}
+.flow svg.wires{pointer-events:none}
+.bot{top:756px;height:44px}
+
+header{position:absolute;left:40px;top:12px;width:600px}
+h1{white-space:nowrap}
+.eyebrow{font-size:11.5px;font-weight:800;letter-spacing:.14em;color:var(--green);text-transform:uppercase}
+h1{font-family:var(--display);font-weight:800;font-size:26px;line-height:1.15;margin:6px 0 0}
+.narr{position:absolute;left:40px;top:76px;width:920px;font-size:12px;color:var(--muted);line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.narr strong{color:var(--green)}
+.narr strong.r{color:var(--red)} .narr strong.b{color:var(--blue)}
+
+.controls{position:absolute;right:36px;top:50px;display:flex;align-items:center;gap:6px}
+.lbl{font-size:10.5px;font-weight:800;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-right:4px}
+.chip{font:700 11.5px var(--body);border:1.5px solid var(--green);background:var(--bg);color:var(--green);border-radius:999px;padding:5px 10px;white-space:nowrap;cursor:pointer;transition:background .2s,color .2s}
+.chip.red{border-color:var(--red);color:var(--red)}
+.chip.blue{border-color:var(--blue);color:var(--blue)}
+.chip:hover,.chip.act{background:var(--green);color:var(--on-accent)}
+.chip.red:hover,.chip.red.act{background:var(--red);color:var(--on-accent)}
+.chip.blue:hover,.chip.blue.act{background:var(--blue);color:var(--on-accent)}
+.chip.ghost{border-color:var(--line);color:var(--muted)}
+.chip.ghost:hover{background:var(--surface);color:var(--ink)}
+.chip:focus-visible,.seg button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.toggles{position:absolute;right:36px;top:10px;display:flex;gap:8px;align-items:center}
+.seg{display:flex;border:1.5px solid var(--line);border-radius:999px;padding:2px;background:var(--surface)}
+.seg button{font:800 10.5px var(--body);letter-spacing:.06em;border:0;background:transparent;color:var(--muted);border-radius:999px;padding:4px 9px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.fs{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);display:grid;place-items:center;cursor:pointer;padding:0}
+.fs:hover{border-color:var(--green);color:var(--green)}
+.fs:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.fs svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+svg.wires{position:absolute;left:0;top:0;width:1280px;height:800px}
+.band{fill:var(--surface);stroke:var(--line);stroke-width:1}
+.band.alt{fill:var(--bg)}
+.mk{fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.mk-n{stroke:var(--green)} .mk-o{stroke:var(--red)} .mk-a{stroke:var(--amber)} .mk-b{stroke:var(--blue)} .mk-s{stroke:var(--wire)}
+.wire{stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round;transition:stroke .3s,opacity .3s,stroke-width .3s}
+.wire.new{stroke:var(--green)}
+.wire.old{stroke:var(--red);stroke-dasharray:4 4}
+.wire.risk{stroke:var(--amber);stroke-dasharray:5 4}
+.wire.side{stroke:var(--blue);stroke-dasharray:5 4}
+.wire.sup{stroke:var(--wire);stroke-dasharray:2 4}
+.wire.on{stroke-width:2.6;stroke-dasharray:0}
+.dim .wire:not(.on){opacity:.15}
+.wlabel{font:700 10px var(--body);fill:var(--muted);letter-spacing:.02em;transition:opacity .3s}
+.wlabel.r{fill:var(--red)}
+.dim .wlabel{opacity:.25}
+.dim .wlabel.on{opacity:1}
+.axis{font:800 9.5px var(--body);letter-spacing:.1em;text-transform:uppercase}
+.axis.p1{fill:var(--green)} .axis.p2{fill:var(--blue)} .axis.p3{fill:var(--ink)}
+.pline{stroke-width:2.5;stroke-linecap:round}
+.pline.p1{stroke:var(--green)} .pline.p2{stroke:var(--blue)} .pline.p3{stroke:var(--ink)}
+
+.lanehd{position:absolute;left:38px;width:108px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center}
+.lanehd .av{width:38px;height:38px;border-radius:50%;background:var(--plate);border:1.5px solid var(--line);display:grid;place-items:center}
+.lanehd .av svg{width:20px;height:20px;fill:none;stroke:#2FA866;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.lanehd b{font-family:var(--display);font-size:12px;font-weight:800;line-height:1.15}
+.lanehd small{font-size:9.5px;color:var(--muted);line-height:1.2}
+
+.node{position:absolute;box-sizing:border-box;border:1.5px solid var(--line);background:var(--bg);border-radius:10px;padding:9px 5px 7px;text-align:center;cursor:pointer;font:inherit;color:var(--ink);transition:transform .2s,border-color .3s,background .3s,opacity .3s,box-shadow .3s;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px}
+.nb{white-space:nowrap}
+.node b{font-family:var(--display);font-size:11.5px;font-weight:700;line-height:1.18}
+.node small{font-size:9.5px;color:var(--muted);line-height:1.22}
+.node.new{background:var(--green-soft);border-color:var(--green)}
+.node.key{box-shadow:0 0 0 3px var(--green-soft),0 0 0 4.5px var(--green)}
+.node.old{background:var(--red-soft);border-color:var(--red);border-style:dashed}
+.node.old b{color:var(--red)}
+.node.risk{background:var(--amber-soft);border-color:var(--amber);border-style:dashed}
+.node.side{background:var(--blue-soft);border-color:var(--blue);border-style:dashed}
+.node .ch{position:absolute;top:-8px;right:6px;font-size:8.5px;font-weight:800;letter-spacing:.08em;padding:1px 6px;border-radius:999px;background:var(--bg);border:1px solid currentColor;text-transform:uppercase;white-space:nowrap}
+.ch.csow{color:var(--ink)} .ch.cnew{color:var(--green)} .ch.cold{color:var(--red)} .ch.crisk{color:var(--amber)} .ch.cside{color:var(--blue)} .ch.com{color:var(--muted)}
+.node .kpi{position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);font-size:8.5px;font-weight:800;letter-spacing:.1em;padding:1px 6px;border-radius:999px;background:var(--ink);color:var(--bg);white-space:nowrap;text-transform:uppercase}
+.node:hover{transform:translateY(-2px);box-shadow:0 6px 16px var(--shadow)}
+.node.key:hover{box-shadow:0 0 0 3px var(--green-soft),0 0 0 4.5px var(--green),0 6px 16px var(--shadow)}
+.node:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+.node.sel{outline:2.5px solid var(--blue);outline-offset:3px}
+.dim .node:not(.on){opacity:.28}
+.node.on{transform:translateY(-1px)}
+
+.benhd{position:absolute;left:40px;top:630px;font-size:10px;font-weight:800;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+.ben{position:absolute;top:648px;height:100px;width:226px;box-sizing:border-box;border-top:3px solid var(--green);padding:8px 4px 0 0;display:flex;flex-direction:column;gap:3px}
+.ben.hold{border-top-color:var(--amber)} .ben.rule{border-top-color:var(--ink)}
+.ben .k{font-size:9.5px;font-weight:800;letter-spacing:.12em;color:var(--green);text-transform:uppercase}
+.ben.hold .k{color:var(--amber)} .ben.rule .k{color:var(--ink)}
+.ben b{font-family:var(--display);font-size:13px;line-height:1.2}
+.ben p{margin:0;font-size:11px;line-height:1.4;color:var(--muted)}
+
+aside{position:absolute;left:990px;top:104px;width:254px;height:644px;box-sizing:border-box;background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:11px;overflow:auto}
+aside .k{font-size:10px;font-weight:800;letter-spacing:.14em;color:var(--green);text-transform:uppercase}
+aside h2{font-family:var(--display);font-size:18px;font-weight:800;margin:0;line-height:1.2;text-wrap:balance}
+aside dl{margin:0;display:flex;flex-direction:column;gap:9px}
+aside dt{font-size:10px;font-weight:800;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+aside dt.s{color:var(--green)} aside dt.w{color:var(--amber)} aside dt.o{color:var(--blue)} aside dt.c{color:var(--red)} aside dt.g{color:var(--ink)}
+aside dd{margin:2px 0 0;font-size:12px;line-height:1.45}
+aside .swoc{display:grid;grid-template-columns:1fr;gap:6px}
+aside .q{border-radius:8px;padding:7px 9px}
+aside .q.s{background:var(--green-soft)} aside .q.w{background:var(--amber-soft)} aside .q.o{background:var(--blue-soft)} aside .q.c{background:var(--red-soft)}
+aside .q dd{margin:1px 0 0}
+aside .gate{border:1.5px dashed var(--ink);border-radius:8px;padding:7px 9px}
+.flag{background:var(--amber-soft);color:var(--amber-ink);border:1px dashed var(--amber);border-radius:8px;padding:7px 9px;font-size:11.5px;line-height:1.4}
+.flag b{display:block;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:2px}
+.fun{display:flex;flex-direction:column;gap:6px}
+.fun div{display:flex;align-items:flex-start;gap:8px;font-size:12px;line-height:1.35}
+.fun i{font-style:normal;flex:none;width:21px;height:21px;border-radius:50%;background:var(--green-soft);color:var(--green);font-weight:800;font-size:10.5px;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+.fun i.p2{background:var(--blue-soft);color:var(--blue)} .fun i.p3{background:var(--surface);color:var(--ink)}
+.c-r{color:var(--red)} .c-g{color:var(--green)} .c-b{color:var(--blue)}
+
+.legend{position:absolute;left:40px;bottom:12px;display:flex;gap:16px;font-size:11px;color:var(--muted);align-items:center}
+.sw{display:inline-block;width:13px;height:13px;border-radius:4px;vertical-align:-3px;margin-right:5px;border:1.5px solid var(--line);background:var(--bg)}
+.sw.n{background:var(--green-soft);border-color:var(--green)}
+.sw.o{background:var(--red-soft);border-color:var(--red);border-style:dashed}
+.sw.a{background:var(--amber-soft);border-color:var(--amber);border-style:dashed}
+.sw.b{background:var(--blue-soft);border-color:var(--blue);border-style:dashed}
+.note{position:absolute;right:36px;bottom:12px;font-size:10.5px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="viewport" id="vp">
+<div class="stage" id="stage">
+ <div class="top" id="top">
+  <header>
+    <div class="eyebrow" data-i="eyebrow"></div>
+    <h1 data-i="title"></h1>
+  </header>
+  <div class="controls">
+    <span class="lbl" data-i="play"></span>
+    <button class="chip red" id="s-a" data-s="a" data-i="sA"></button>
+    <button class="chip" id="s-b" data-s="b" data-i="sB"></button>
+    <button class="chip blue" id="s-c" data-s="c" data-i="sC"></button>
+    <button class="chip ghost" id="s-r" data-s="r" data-i="reset"></button>
+  </div>
+  <div class="toggles">
+    <div class="seg" role="group" aria-label="Language"><button id="l-vi" data-l="vi">VN</button><button id="l-en" data-l="en">EN</button></div>
+    <button class="fs" id="fs" aria-label="Fullscreen" title="Fullscreen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    <div class="seg" role="group" aria-label="Theme"><button id="t-light" data-t="light" data-i="light"></button><button id="t-dark" data-t="dark" data-i="dark"></button></div>
+  </div>
+  <div class="narr" id="narr"></div>
+ </div>
+ <div class="flow" id="flow">
+  <svg class="wires" id="wires" viewBox="0 0 1280 800" aria-hidden="true">
+    <defs>
+      <marker id="mn" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path class="mk mk-n" d="M2,1.5L8.5,5L2,8.5"/></marker>
+      <marker id="mo" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path class="mk mk-o" d="M2,1.5L8.5,5L2,8.5"/></marker>
+      <marker id="ma" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path class="mk mk-a" d="M2,1.5L8.5,5L2,8.5"/></marker>
+      <marker id="mb" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path class="mk mk-b" d="M2,1.5L8.5,5L2,8.5"/></marker>
+      <marker id="ms" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path class="mk mk-s" d="M2,1.5L8.5,5L2,8.5"/></marker>
+    </defs>
+    <rect class="band" x="30" y="122" width="930" height="92" rx="12"/>
+    <rect class="band alt" x="30" y="224" width="930" height="92" rx="12"/>
+    <rect class="band" x="30" y="326" width="930" height="92" rx="12"/>
+    <rect class="band alt" x="30" y="428" width="930" height="92" rx="12"/>
+    <rect class="band" x="30" y="530" width="930" height="92" rx="12"/>
+    <line class="pline p1" x1="162" y1="117" x2="548" y2="117"/>
+    <line class="pline p2" x1="570" y1="117" x2="752" y2="117"/>
+    <line class="pline p3" x1="774" y1="117" x2="956" y2="117"/>
+    <g id="axisG"></g>
+    <g id="wiresG"></g>
+    <text class="wlabel r" x="470" y="570" data-w="px2-px3" data-i="rel1"></text>
+    <text class="wlabel r" x="470" y="584" data-w="px2-px3" data-i="rel2"></text>
+  </svg>
+
+  <div class="lanehd" style="top:126px;height:84px"><span class="av"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/></svg></span><b>Hedima</b><small data-i="lnHs"></small></div>
+  <div class="lanehd" style="top:228px;height:84px"><span class="av"><svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-5h7"/></svg></span><b>Omron</b><small>Medical | Sales</small></div>
+  <div class="lanehd" style="top:330px;height:84px"><span class="av"><svg viewBox="0 0 24 24"><path d="M6 3v6a4 4 0 0 0 8 0V3M10 13v3a5 5 0 0 0 10 0v-2"/><circle cx="20" cy="12" r="2"/></svg></span><b data-i="lnCl"></b><small data-i="lnCls"></small></div>
+  <div class="lanehd" style="top:432px;height:84px"><span class="av"><svg viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1zM15 9a4 4 0 0 1 0 6M18 6a8 8 0 0 1 0 12"/></svg></span><b data-i="lnCo"></b><small>Gatekeeper</small></div>
+  <div class="lanehd" style="top:534px;height:84px"><span class="av"><svg viewBox="0 0 24 24"><path d="M4 21V7l8-4 8 4v14M4 21h16M9 21v-5h6v5M9 10h.01M15 10h.01"/></svg></span><b data-i="lnOp"></b><small data-i="lnOps"></small></div>
+
+  <div id="nodes"></div>
+
+  <div class="benhd" data-i="benHd"></div>
+  <div id="bens"></div>
+
+  <aside id="panel" aria-live="polite"></aside>
+ </div>
+ <div class="bot" id="bot">
+  <div class="legend"><span><i class="sw n"></i><span data-i="lg1"></span></span><span><i class="sw o"></i><span data-i="lg2"></span></span><span><i class="sw a"></i><span data-i="lg3"></span></span><span><i class="sw b"></i><span data-i="lg4"></span></span><span><i class="sw"></i><span data-i="lg5"></span></span></div>
+  <div class="note" data-i="note"></div>
+ </div>
+</div>
+</div>
+
+<script>
+let lang='vi';
+const T=v=>Array.isArray(v)?v[lang==='vi'?0:1]:v;
+const UI={
+ eyebrow:"Omron x Hedima | Stroke prevention & AFib screening",
+ title:"Hospital Approaching Flow",
+ play:"Play journey", reset:["Đặt lại","Reset"], light:["Sáng","Light"], dark:["Tối","Dark"],
+ sA:["Push | Hiện tại","Push | Today"], sB:["Từng bước | Đề xuất Hedima","Step by step | Hedima proposal"], sC:["Side door | Stroke Conf.","Side door | Stroke Conf."],
+ narr:["Mỗi điểm chạm chỉ xin bệnh viện một quyết định. Bấm Play journey để so sánh 3 cách tiếp cận, bấm từng bước để xem Thế mạnh | Điểm yếu | Cơ hội | Khó khăn.","Each touchpoint asks the hospital for one decision. Press Play journey to compare 3 approaches, click any step to see Strengths | Weaknesses | Opportunities | Challenges."],
+ rel1:["Quan hệ xấu dần","Relationship erodes"], rel2:["Khó mở lại","Hard to reopen"],
+ lnHs:["Agency | Quan hệ","Agency | Relationships"],
+ lnCl:["Khoa lâm sàng","Clinical"], lnCls:["Tim mạch | Khám bệnh | Nội tiết","Cardio | Outpatient | Endo"],
+ lnCo:["Truyền thông | KHTH","Comms | Planning"],
+ lnOp:["BOD | Mua hàng","BOD | Procurement"], lnOps:["Trang thiết bị | IT","Equipment | IT"],
+ benHd:["Bệnh viện đang ở đâu | 21/10/2026","Where each hospital stands | 21 Oct 2026"],
+ lg1:["Đề xuất Hedima","Hedima proposal"], lg2:["Push | Hiện tại","Push | Today"], lg3:["Rủi ro","Risk"], lg4:"Side door", lg5:["Omron | Gatekeeper","Omron | Gatekeeper"],
+ note:["Draft cho Omron | Stage 4–7 là đề xuất, chưa phải scope đã ký","Draft for Omron | Stages 4–7 are proposed, not contracted scope"],
+ confirm:["Cần confirm","To confirm"], ask:["Xin bệnh viện","The one ask"], gate:["Gate sang bước tiếp","Gate to next step"],
+ S:["Thế mạnh","Strength"], W:["Điểm yếu","Weakness"], O:["Cơ hội","Opportunity"], C:["Khó khăn","Challenge"]
+};
+const STG=[["0 | Tiếp cận","0 | Entry"],["1 | Expert","1 | Expert"],["2 | HCP conf.","2 | HCP conf."],["3 | Livestream","3 | Livestream"],["4 | Nhu cầu","4 | Need"],["5 | Pilot","5 | Pilot"],["6 | SOP","6 | SOP"],["7 | Nhân rộng","7 | Scale"]];
+const CX=[160,262,364,466,568,670,772,874], LY=[135,237,339,441,543];
+const LANE={h:"Hedima",m:"Omron",cl:["Khoa lâm sàng","Clinical"],co:["Truyền thông | KHTH","Comms | Planning"],op:["BOD | Mua hàng","BOD | Procurement"]};
+const N={
+ h0:{c:0,l:0,cls:'new key',ln:'h',kpi:"Stage 0",t:["Tiếp cận","Map & enter"],s:["Contact lâu năm","Trusted contacts"],
+  ask:["Xác định gatekeeper và một bác sĩ đầu mối tại bệnh viện","Identify the gatekeeper and one clinical contact"],
+  sw:[["Hedima có contact lâu năm tại Hoàn Mỹ, Hồng Bàng | Cả hai đã đồng ý 3 SOW","Long-time Hedima contacts at Hoàn Mỹ and Hồng Bàng | Both agreed the 3 SOWs"],
+      ["Đầu mối hiện tại là phòng Truyền thông, không có quyền về chuyên môn hay mua hàng","Our current contact is Communications, with no clinical or purchasing authority"],
+      ["Hoàn Mỹ là chuỗi: thắng một bệnh viện có thể lan sang Hoàn Mỹ Gold và các viện cùng hệ thống","Hoàn Mỹ is a group: one win can spread to Hoàn Mỹ Gold and sister hospitals"],
+      ["Mọi việc liên quan chuyên môn phải trình lãnh đạo, ask lớn sẽ bị tắc ngay ở đây","Anything clinical goes to management, so a big ask stalls right here"]]},
+ g0:{c:0,l:3,cls:'',ln:'co',ch:['com',"Gatekeeper"],kpi:"Gate 0",t:"Gatekeeper",s:["Truyền thông","Comms"],
+  ask:["Đồng ý host Expert Meeting (SOW 1)","Agree to host the Expert Meeting (SOW 1)"],
+  gate:["Có ngày Expert Meeting | Có tên ít nhất 1 trưởng khoa tham gia","Expert Meeting date set | At least one named head of department"],
+  sw:[["Ask nhỏ, nằm trong quyền của phòng Truyền thông","A small ask within Communications' own authority"],
+      ["Không thể thay bác sĩ trả lời câu hỏi chuyên môn hay quyết định thiết bị","Cannot answer clinical questions or decide on equipment for the doctors"],
+      ["Gatekeeper ủng hộ sẽ mở cửa tới các khoa lâm sàng","A supportive gatekeeper opens the door to clinical departments"],
+      ["Ask vượt quyền thì phải trình lãnh đạo, thời gian phản hồi kéo dài","Any ask beyond their remit must be escalated, and replies slow down"]]},
+ px1:{c:1,l:3,cls:'old',ln:'co',ch:['cold',["Hiện tại","Today"]],t:["Xin đổi workflow","Ask for new workflow"],s:["Ngay buổi đầu","At first meeting"],
+  ask:["Gặp nhiều phòng ban để xin tích hợp thiết bị vào patient journey ngay từ đầu","Meet several departments to integrate the device into the patient journey from day one"],
+  ex:[[["Vì sao khó","Why it's hard"],["Đổi patient journey là đổi protocol điều trị: Mua hàng | Giá thầu | Chuyên môn | Marketing | Phần mềm IT | SOP | Nhân sự liên quan","A new patient journey means a new treatment protocol: Procurement | Tender | Clinical | Marketing | IT software | SOP | Staff"]]],
+  sw:[["Thể hiện rõ mục tiêu dài hạn của Omron","Makes Omron's long-term goal clear"],
+      ["Bệnh viện chưa đủ hiểu Omron, chưa có bác sĩ nào đứng ra ủng hộ","The hospital doesn't know Omron well yet, and no doctor backs the idea"],
+      ["Nhận feedback sớm về quy trình nội bộ, như Hoàn Mỹ đã chia sẻ","Early feedback on internal process, as Hoàn Mỹ shared"],
+      ["Hoàn Mỹ: yêu cầu thiết bị phải đến từ khoa có nhu cầu, rồi mới qua Trang thiết bị và Mua hàng","Hoàn Mỹ: equipment requests must come from the department, then go to Equipment and Procurement"]]},
+ px2:{c:1,l:4,cls:'risk',ln:'op',ch:['crisk',["Rủi ro","Risk"]],t:["Trình lãnh đạo","Mgmt. review"],s:["Chưa có khoa đề xuất","No dept. request"],
+  ex:[[["Chuyện gì xảy ra","What happens"],["Ban lãnh đạo nhận một đề xuất từ bên ngoài, chưa có khoa nào yêu cầu và chưa có data","Management receives an outside proposal with no department request and no data"]],
+      [["Hiện tại","Today"],["Hoàn Mỹ Sài Gòn đang ở bước này: chờ ý kiến lãnh đạo trước khi xác nhận buổi discussion","Hoàn Mỹ Sài Gòn is here: waiting for management before confirming the discussion"]]]},
+ px3:{c:2,l:4,cls:'old',ln:'op',ch:['cold',["Hiện tại","Today"]],t:["Từ chối | Im lặng","Decline | Stall"],s:["Mất cơ hội","Lost chance"],
+  ex:[[["Kết quả","Result"],["Bệnh viện từ chối hoặc không phản hồi. Mỗi lần push lại, contact càng khó mở lại","The hospital declines or goes quiet. Each push makes the contact harder to reopen"]],
+      [["Key learning","Key learning"],["Nếu thêm 1–2 bệnh viện từ chối cùng một ask, các bệnh viện có chung cách nhìn về ask này. Cần đổi cách tiếp cận, không đổi bệnh viện","If 1–2 more hospitals decline the same ask, they share one view of it. Change the approach, not the hospital"]]]},
+ s0:{c:1,l:1,cls:'side',ln:'m',ch:['cside',"Side door"],t:"Stroke Conf.",s:["Hà Nội | 31/10","Hanoi | 31 Oct"],
+  ask:["Bác sĩ trải nghiệm ECG 6L tại booth và để lại thông tin qua survey","Doctors try the ECG 6L at the booth and leave details via the survey"],
+  sw:[["Gặp nhiều bác sĩ tim mạch, thần kinh từ nhiều bệnh viện cùng lúc","Meets many cardiology and neurology doctors from many hospitals at once"],
+      ["Lead từ booth còn lạnh, cần follow-up trong tuần","Booth leads are cold and need follow-up within the week"],
+      ["Bác sĩ quan tâm vào thẳng Expert Meeting qua kênh chuyên môn, không phải đi qua gatekeeper","Interested doctors enter at the Expert Meeting through the clinical route, skipping the gatekeeper"],
+      ["Survey phải hỏi đúng: Bệnh viện | Khoa | Có muốn trao đổi thêm","The survey must capture Hospital | Department | Willingness to talk further"]],
+  f:["Thêm 1 câu vào survey: 'Anh/chị có muốn Omron liên hệ để trao đổi thêm?'","Add one survey question: 'May Omron contact you to discuss further?'"]},
+ m1:{c:2,l:1,cls:'',ln:'m',ch:['com',"Omron"],t:"Omron Medical",s:["Claim | Training","Claims | Training"],
+  ex:[[["Vai trò","Role"],["Duyệt claim lâm sàng, trình bày bằng chứng và training sản phẩm cho Expert Meeting, HCP Conference","Approves clinical claims, presents evidence and trains staff for the Expert Meeting and HCP Conference"]]],
+  sw:[["Omron có câu chuyện stroke prevention rõ ràng","Omron has a clear stroke-prevention story"],
+      ["Máy là công cụ sàng lọc, không chẩn đoán | Bằng chứng tại Việt Nam còn ít","The device screens, it doesn't diagnose | Local evidence is still thin"],
+      ["Training sớm giúp nhân viên tự tin, là điều kiện trước khi chạy hoạt động online","Early training builds staff confidence and is required before any online activity"],
+      ["Claim phải đúng quy định quảng cáo thiết bị y tế","Claims must follow medical device advertising rules"]]},
+ e1:{c:1,l:2,cls:'new key',ln:'cl',ch:['csow',"SOW 1"],kpi:"Gate 1",t:"Expert Meeting",s:["Trưởng khoa","Dept. heads"],
+  ask:["Chuyên gia review patient journey và chỉ ra điểm phù hợp để sàng lọc","Experts review the patient journey and mark where screening fits"],
+  gate:["Chuyên gia đồng ý journey đã chỉnh | 1–2 bác sĩ nhận nói tại HCP Conference","Experts endorse the adapted journey | 1–2 doctors agree to speak at the HCP Conference"],
+  sw:[["Hình thức khoa học, bác sĩ dễ nhận lời | Đã có trong hợp đồng","A scientific format doctors accept easily | Already in the contract"],
+      ["Chưa có bằng chứng tại chỗ | Dễ bị xem là quảng bá nếu pitch mạnh","No local evidence yet | Looks promotional if pitched hard"],
+      ["Bác sĩ cùng viết journey, nên journey thành protocol của bệnh viện chứ không phải của Omron","Doctors co-write the journey, so it becomes the hospital's protocol, not Omron's"],
+      ["Thời gian của trưởng khoa | Có thể bảo vệ protocol ECG, Holter hiện tại","Department heads' time | They may defend the current ECG and Holter protocol"]]},
+ e2:{c:2,l:2,cls:'new',ln:'cl',ch:['csow',"SOW 2"],kpi:"Gate 2",t:"HCP Conference",s:["Dùng thử máy","Device trial"],
+  ask:["Bác sĩ, điều dưỡng dùng thử máy và góp ý về tính khả thi","Doctors and nurses try the device and give feasibility feedback"],
+  gate:["Nhân viên đã được training | Tìm được champion ở ít nhất 1 khoa","Staff trained | A champion found in at least one department"],
+  sw:[["Tiếp cận nhiều HCP cùng lúc, có hands-on demo","Reaches many HCPs at once, with hands-on demos"],
+      ["Phụ thuộc bệnh viện duyệt agenda | Khó đo ý định áp dụng sau một sự kiện","Depends on hospital agenda approval | Hard to measure adoption intent from one event"],
+      ["Lộ ra nhu cầu thật của từng khoa và người sẽ đề xuất thiết bị sau này","Reveals each department's real need and who will request devices later"],
+      ["Quy định tài trợ sự kiện HCP | Thời gian duyệt của bệnh viện","HCP event sponsorship rules | Hospital approval lead time"]]},
+ g3:{c:3,l:3,cls:'new',ln:'co',kpi:"Gate 3",t:["Duyệt nội dung","Content OK"],s:"Livestream",
+  ask:["Phòng Truyền thông duyệt nội dung và bác sĩ tham gia livestream","Communications approves the content and the doctor on the livestream"],
+  gate:["Nội dung được duyệt | Nhân viên đã training để trả lời bệnh nhân","Content approved | Staff trained to answer patients"],
+  sw:[["Đúng việc của phòng Truyền thông, ask dễ đồng ý","Fits Communications' role, an easy yes"],
+      ["Thêm một vòng duyệt nội dung","One more content review round"],
+      ["Bệnh viện được truyền thông trên kênh của Hedima","The hospital gets exposure on Hedima's channels"],
+      ["Quy định quảng cáo y tế | Bệnh viện lo về hình ảnh thương hiệu","Medical advertising rules | Hospital brand concerns"]]},
+ h3:{c:3,l:0,cls:'new',ln:'h',ch:['csow',"SOW 3"],kpi:"Demand",t:"Livestream",s:["Bệnh nhân nguy cơ","At-risk patients"],
+  ask:["Bác sĩ bệnh viện mời bệnh nhân nguy cơ cao đến sàng lọc AFib","A hospital doctor invites high-risk patients to get AFib screening"],
+  sw:[["Kênh tiếp cận bệnh nhân của Hedima | Lợi ích bệnh viện thấy ngay","Hedima's patient channels | A benefit the hospital sees immediately"],
+      ["Cần training sản phẩm trước để nhân viên trả lời được bệnh nhân","Needs product training first so staff can answer patients"],
+      ["Có nhu cầu sàng lọc thật, nên khoa có lý do để xin thiết bị","Real screening demand gives the department a reason to request devices"],
+      ["Bệnh nhân đến mà chưa có điểm sàng lọc thì dễ thất vọng","Patients who arrive before a screening point exists get frustrated"]]},
+ e4:{c:4,l:2,cls:'new',ln:'cl',ch:['cnew',"Add-on"],kpi:"Gate 4",t:["Khoa đề xuất","Dept. request"],s:["Có champion","Has a champion"],
+  ask:["Trưởng khoa tự đề xuất thử nghiệm điểm sàng lọc lên BOD","The head of department proposes a screening trial to the BOD"],
+  sw:[["Đúng quy trình Hoàn Mỹ đã chia sẻ: yêu cầu phải đến từ khoa","Matches what Hoàn Mỹ told us: requests must come from the department"],
+      ["Hedima và Omron không kiểm soát bước này, phụ thuộc ưu tiên của champion","Neither Hedima nor Omron controls this step; it depends on the champion"],
+      ["Đề xuất từ bên trong được duyệt nhanh hơn đề xuất từ bên ngoài","Internal requests move faster than outside proposals"],
+      ["Champion bận, đổi vị trí hoặc đổi ưu tiên","The champion gets busy, changes role or priorities"]]},
+ s4:{c:4,l:1,cls:'',ln:'m',ch:['com',"Omron"],t:"Omron Sales",s:["Thiết bị | Mượn","Device | Loan"],
+  ex:[[["Vai trò","Role"],["Nhận contact bệnh viện từ Hedima, dẫn dắt trao đổi về thiết bị, điều kiện cho mượn và data","Takes the hospital contacts Hedima shares and leads talks on devices, loan terms and data"]]],
+  sw:[["Chuyên môn về sản phẩm và chính sách giá","Product and pricing expertise"],
+      ["Quan hệ trực tiếp với bệnh viện còn mới","Direct relationship with the hospital is still new"],
+      ["Hedima đã làm cầu nối qua SOW 1–3, Sales vào đúng lúc khoa có nhu cầu","Hedima built the bridge through SOW 1–3, so Sales enters when the need exists"],
+      ["Vào quá sớm sẽ bị xem là bán hàng","Entering too early reads as selling"]]},
+ o4:{c:4,l:4,cls:'new',ln:'op',ch:['cnew',"Add-on"],t:["Duyệt cho mượn","Loan approval"],s:["BOD | Thiết bị","BOD | Equipment"],
+  ask:["Duyệt cho mượn một số máy để chạy pilot","Approve a small device loan for a pilot"],
+  gate:["Đề xuất được duyệt | Thống nhất điều kiện mượn và chia sẻ data","Request approved | Loan and data-sharing terms agreed"],
+  sw:[["Chỉ là cho mượn ngắn hạn, chưa phải mua sắm","A short loan, not a purchase"],
+      ["Có thể vẫn phải đánh giá thiết bị theo quy trình","May still need a formal equipment assessment"],
+      ["Tạo tiền lệ cho quy trình mua sắm sau này","Sets a precedent for later purchasing"],
+      ["Đánh giá thiết bị | Mua hàng | Có thể phải đấu thầu","Equipment assessment | Procurement | Possibly bidding"]]},
+ e5:{c:5,l:2,cls:'new',ln:'cl',ch:['cnew',"Add-on"],kpi:"Gate 5",t:["Pilot sàng lọc","Screening pilot"],s:["Không thay máy","Add-on only"],
+  ask:["Điểm sàng lọc sau đăng ký, trước khám, cho bệnh nhân nguy cơ cao: ≥65 tuổi | Tăng huyết áp | Bệnh tim mạch","A screening point after registration, before consultation, for high-risk patients: ≥65 | Hypertension | Cardiovascular history"],
+  gate:["Review data pilot cùng bác sĩ | Bệnh viện muốn chuẩn hóa quy trình","Pilot data reviewed with doctors | The hospital wants to formalize the flow"],
+  sw:[["Không đổi quy trình khám hiện tại, không thay máy đang dùng","No change to the current consultation or existing devices"],
+      ["Cần nhân sự hướng dẫn | Bệnh nhân đồng ý chia sẻ data","Needs staff to guide patients | Patient consent for data"],
+      ["Data thực tế tại Việt Nam: bằng chứng mọi bệnh viện khác sẽ hỏi","Real Vietnamese data: the proof every other hospital will ask for"],
+      ["Xử lý kết quả 'AFib possible' | Trách nhiệm pháp lý | Năng lực làm ECG xác nhận","Handling 'AFib possible' results | Liability | ECG capacity for confirmation"]],
+  f:["Omron Medical confirm: thời gian đo, định vị là công cụ hỗ trợ sàng lọc, điều kiện cho mượn máy","Omron Medical to confirm: measurement time, positioning as a screening aid, device loan terms"]},
+ o6:{c:6,l:4,cls:'new',ln:'op',kpi:"Gate 6",t:["SOP nội bộ","Internal SOP"],s:["Protocol | IT","Protocol | IT"],
+  ask:["Đưa bước sàng lọc vào hướng dẫn nội bộ và SOP của bệnh viện","Adopt the screening step into the hospital's internal guidance and SOP"],
+  gate:["SOP được duyệt | Có dòng ngân sách trong chu kỳ trang thiết bị kế tiếp","SOP approved | A budget line in the next equipment cycle"],
+  sw:[["Có data pilot và bác sĩ champion đứng tên","Pilot data plus champion doctors who own the result"],
+      ["Chuỗi phê duyệt dài, bên ngoài không đẩy nhanh được","A long approval chain outsiders cannot speed up"],
+      ["Patient journey phòng ngừa đột quỵ được chuẩn hóa: mục tiêu cuối của Omron","A standardized stroke-prevention journey: Omron's end goal"],
+      ["Đụng tới Protocol | Phần mềm HIS | Giá dịch vụ | Nhân sự liên quan","Touches Protocol | HIS software | Service pricing | Staff"]]},
+ o7:{c:7,l:4,cls:'new',ln:'op',kpi:"Scale",t:["Nhân rộng","Scale up"],s:["Đấu thầu | Chuỗi","Tender | Group"],
+  ask:["Mua thiết bị và nhân rộng sang các bệnh viện cùng hệ thống","Purchase devices and roll out to sister hospitals"],
+  sw:[["Mô hình đã chứng minh, có bệnh viện tham chiếu","A proven model with a reference hospital"],
+      ["Đấu thầu mở ra cạnh tranh về giá","Tenders open the door to price competition"],
+      ["Nhân rộng trong chuỗi | Case tham chiếu cho các hội chuyên ngành","Group roll-out | A reference case for medical associations"],
+      ["Thời điểm phụ thuộc chu kỳ ngân sách năm","Timing depends on the annual budget cycle"]]}
+};
+const E=[
+ ["h0","g0",[[202,201],[202,441]],"new"],
+ ["g0","e1",[[244,458],[253,458],[253,372],[262,372]],"new"],
+ ["g0","px1",[[244,490],[262,490]],"old"],
+ ["px1","px2",[[304,507],[304,543]],"risk"],
+ ["px2","px3",[[346,576],[364,576]],"old"],
+ ["s0","e1",[[304,303],[304,339]],"side"],
+ ["e1","e2",[[346,372],[364,372]],"new"],
+ ["m1","e2",[[406,303],[406,339]],"sup"],
+ ["e2","g3",[[448,372],[457,372],[457,474],[466,474]],"new"],
+ ["g3","h3",[[508,441],[508,201]],"new"],
+ ["h3","e4",[[550,168],[559,168],[559,372],[568,372]],"new"],
+ ["s4","e4",[[610,303],[610,339]],"sup"],
+ ["e4","o4",[[610,405],[610,543]],"new"],
+ ["o4","e5",[[652,576],[661,576],[661,372],[670,372]],"new"],
+ ["e5","o6",[[754,372],[763,372],[763,576],[772,576]],"new"],
+ ["o6","o7",[[856,576],[874,576]],"new"]
+];
+const BEN=[
+ {cls:'hold',k:["Stage 0 | Đang chờ","Stage 0 | On hold"],t:"Hoàn Mỹ Sài Gòn",p:["Đã đồng ý 3 SOW | Chờ lãnh đạo duyệt buổi discussion | Training sản phẩm trước hoạt động online","Agreed 3 SOWs | Waiting for management to approve the discussion | Product training before online activity"]},
+ {cls:'',k:["Stage 0 → 1","Stage 0 → 1"],t:"Hồng Bàng",p:["Đã đồng ý 3 SOW | Discussion dự kiến tuần sau, theo lịch của bệnh viện","Agreed 3 SOWs | Discussion tentatively next week, per the hospital's availability"]},
+ {cls:'',k:"Stage 0",t:"Hoàn Mỹ Gold",p:["Outreach đầu tiên trong hệ thống Hoàn Mỹ","First outreach inside the Hoàn Mỹ network"]},
+ {cls:'rule',k:["Nguyên tắc","Rules"],t:["Một ask mỗi buổi","One ask per meeting"],p:["Bị từ chối thì dừng 4–6 tuần, quay lại qua kênh bác sĩ | 2 lần từ chối là tín hiệu về cách tiếp cận","After a no, pause 4–6 weeks and return via doctors | Two declines signal the approach, not the hospital"]}
+];
+const S={
+ a:{p:["h0","g0","px1","px2","px3"],n:["<strong class='r'>Push | Hiện tại:</strong> Xin tích hợp thiết bị ngay → Gatekeeper phải trình lãnh đạo → Chưa có khoa đề xuất → Từ chối hoặc im lặng → Quan hệ xấu dần","<strong class='r'>Push | Today:</strong> Ask for device integration now → Gatekeeper must escalate → No department request → Decline or silence → Relationship erodes"]},
+ b:{p:["h0","g0","e1",{n:["e2"],also:["m1"]},"g3","h3",{n:["e4"],also:["s4"]},"o4","e5","o6","o7"],n:["<strong>Từng bước | Đề xuất Hedima:</strong> Gatekeeper host Expert Meeting → HCP Conference → Livestream kéo bệnh nhân → Khoa tự đề xuất → Pilot → SOP → Nhân rộng","<strong>Step by step | Hedima proposal:</strong> Gatekeeper hosts Expert Meeting → HCP Conference → Livestream brings patients → Department raises need → Pilot → SOP → Scale"]},
+ c:{p:["s0","e1",{n:["e2"],also:["m1"]}],n:["<strong class='b'>Side door | Stroke Conference:</strong> Bác sĩ trải nghiệm ECG 6L tại booth Hà Nội → Vào thẳng Expert Meeting qua kênh chuyên môn → HCP Conference","<strong class='b'>Side door | Stroke Conference:</strong> Doctors try the ECG 6L at the Hanoi booth → Enter at the Expert Meeting through the clinical route → HCP Conference"]}
+};
+const SVGNS='http://www.w3.org/2000/svg';
+const wg=document.getElementById('wiresG'),ag=document.getElementById('axisG'),nodes=document.getElementById('nodes'),panel=document.getElementById('panel'),stage=document.getElementById('stage'),narr=document.getElementById('narr'),bens=document.getElementById('bens');
+const MK={new:'mn',old:'mo',risk:'ma',side:'mb',sup:'ms'};
+function rpath(P,R=7){let d='M'+P[0][0]+','+P[0][1];for(let i=1;i<P.length-1;i++){const [x0,y0]=P[i-1],[x1,y1]=P[i],[x2,y2]=P[i+1];const r=Math.min(R,Math.hypot(x1-x0,y1-y0)/2,Math.hypot(x2-x1,y2-y1)/2);const ax=x1-Math.sign(x1-x0)*r,ay=y1-Math.sign(y1-y0)*r,bx=x1+Math.sign(x2-x1)*r,by=y1+Math.sign(y2-y1)*r;d+=' L'+ax+','+ay+' Q'+x1+','+y1+' '+bx+','+by}const L=P[P.length-1];return d+' L'+L[0]+','+L[1]}
+E.forEach(e=>{const l=document.createElementNS(SVGNS,'path');l.setAttribute('d',rpath(e[2]));l.setAttribute('class','wire '+e[3]);l.setAttribute('marker-end','url(#'+MK[e[3]]+')');l.id='w-'+e[0]+'-'+e[1];wg.appendChild(l)});
+for(const id in N){const n=N[id],b=document.createElement('button');b.className='node '+(n.cls||'');b.id='n-'+id;
+ Object.assign(b.style,{left:CX[n.c]+'px',top:LY[n.l]+'px',width:'84px',height:'66px'});b.onclick=()=>show(id);nodes.appendChild(b)}
+const seg=x=>{x=String(x);if(x.indexOf(' | ')<0)return x;const a=x.split(' | ');return a.map((p,i)=>'<span class="nb">'+p+(i<a.length-1?' |':'')+'</span>').join(' ')};
+function renderAxis(){ag.innerHTML='';STG.forEach((s,i)=>{const t=document.createElementNS(SVGNS,'text');t.setAttribute('x',CX[i]+42);t.setAttribute('y',111);t.setAttribute('text-anchor','middle');t.setAttribute('class','axis '+(i<4?'p1':i<6?'p2':'p3'));t.textContent=T(s);ag.appendChild(t)})}
+function renderNodes(){for(const id in N){const n=N[id],b=document.getElementById('n-'+id);
+ b.innerHTML='<b>'+seg(T(n.t))+'</b>'+(n.s?'<small>'+seg(T(n.s))+'</small>':'')
+  +(n.ch?'<span class="ch '+n.ch[0]+'">'+T(n.ch[1])+'</span>':'')+(n.kpi?'<span class="kpi">'+T(n.kpi)+'</span>':'')}
+ bens.innerHTML=BEN.map((x,i)=>'<div class="ben '+x.cls+'" style="left:'+(40+i*232)+'px"><span class="k">'+T(x.k)+'</span><b>'+T(x.t)+'</b><p>'+T(x.p)+'</p></div>').join('')}
+function overview(){panel.innerHTML=lang==='vi'
+ ?'<div class="k">Cách đọc</div><h2>Mỗi điểm chạm chỉ xin một cái gật đầu</h2><dl><dd><b class="c-r">Push</b>: xin tích hợp thiết bị ngay từ buổi đầu. Phòng Truyền thông phải trình lãnh đạo, chưa có khoa nào đề xuất nên dễ bị từ chối.</dd><dd><b class="c-g">Từng bước</b>: 3 SOW đã ký là cầu nối tới bác sĩ. Khi có champion và nhu cầu thật, khoa tự đề xuất thiết bị.</dd><dd><b class="c-b">Side door</b>: hội nghị đột quỵ Hà Nội mở thêm kênh chuyên môn tới bệnh viện mới.</dd></dl><div class="k">3 giai đoạn</div><div class="fun"><div><i>1</i>Tạo niềm tin | Stage 0–3 | 3 SOW đã ký</div><div><i class="p2">2</i>Chứng minh giá trị | Stage 4–5 | Add-on</div><div><i class="p3">3</i>Bệnh viện làm chủ | Stage 6–7 | SOP, mua sắm</div></div><div class="flag"><b>Bấm vào từng bước</b>Xem Thế mạnh | Điểm yếu | Cơ hội | Khó khăn và điều kiện Gate để sang bước tiếp.</div>'
+ :'<div class="k">How to read</div><h2>Each touchpoint asks for one yes</h2><dl><dd><b class="c-r">Push</b>: ask for device integration at the first meeting. Communications must escalate, no department has asked, so a decline is likely.</dd><dd><b class="c-g">Step by step</b>: the 3 contracted SOWs are the bridge to doctors. With a champion and real demand, the department requests devices itself.</dd><dd><b class="c-b">Side door</b>: the Hanoi stroke conference opens a clinical route to new hospitals.</dd></dl><div class="k">3 phases</div><div class="fun"><div><i>1</i>Earn trust | Stages 0–3 | 3 contracted SOWs</div><div><i class="p2">2</i>Prove value | Stages 4–5 | Add-on</div><div><i class="p3">3</i>Hospital-owned | Stages 6–7 | SOP, purchasing</div></div><div class="flag"><b>Click any step</b>See Strengths | Weaknesses | Opportunities | Challenges and the gate to the next step.</div>'}
+let cur=null,playing=null,timers=[];
+function show(id){cur=id;const n=N[id];document.querySelectorAll('.node.sel').forEach(x=>x.classList.remove('sel'));document.getElementById('n-'+id).classList.add('sel');
+ let h='<div class="k">'+T(LANE[n.ln])+(n.kpi?' | '+T(n.kpi):'')+'</div><h2>'+T(n.t)+'</h2><dl>';
+ if(n.ask)h+='<div><dt>'+T(UI.ask)+'</dt><dd>'+T(n.ask)+'</dd></div>';
+ (n.ex||[]).forEach(r=>h+='<div><dt>'+T(r[0])+'</dt><dd>'+T(r[1])+'</dd></div>');
+ if(n.sw)h+='<div class="swoc">'+['S','W','O','C'].map((k,i)=>'<div class="q '+k.toLowerCase()+'"><dt class="'+k.toLowerCase()+'">'+T(UI[k])+'</dt><dd>'+T(n.sw[i])+'</dd></div>').join('')+'</div>';
+ if(n.gate)h+='<div class="gate"><dt class="g">'+T(UI.gate)+'</dt><dd>'+T(n.gate)+'</dd></div>';
+ h+='</dl>'+(n.f?'<div class="flag"><b>'+T(UI.confirm)+'</b>'+T(n.f)+'</div>':'');panel.innerHTML=h}
+function clearRun(){timers.forEach(clearTimeout);timers=[];stage.classList.remove('dim');playing=null;
+ document.querySelectorAll('.on').forEach(x=>x.classList.remove('on'));document.querySelectorAll('.chip').forEach(c=>c.classList.remove('act'))}
+function lit(a,b){const w=document.getElementById('w-'+a+'-'+b);if(w)w.classList.add('on');document.querySelectorAll('[data-w="'+a+'-'+b+'"]').forEach(l=>l.classList.add('on'))}
+function play(k){clearRun();if(k==='r'){cur=null;document.querySelectorAll('.node.sel').forEach(x=>x.classList.remove('sel'));narr.innerHTML=T(UI.narr);overview();return}
+ const sc=S[k],rm=matchMedia('(prefers-reduced-motion: reduce)').matches,step=rm?0:650;playing=k;
+ document.getElementById('s-'+k).classList.add('act');stage.classList.add('dim');narr.innerHTML=T(sc.n);
+ const steps=sc.p.map(it=>typeof it==='string'?{n:[it]}:it);
+ steps.forEach((o,i)=>{const from=o.from||(i>0?steps[i-1].n:[]);timers.push(setTimeout(()=>{
+   o.n.forEach(x=>{document.getElementById('n-'+x).classList.add('on');from.forEach(p=>lit(p,x));
+     (o.also||[]).forEach(a=>{document.getElementById('n-'+a).classList.add('on');lit(a,x)})});
+   show(o.n[0])},i*step))})}
+document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>play(c.dataset.s));
+function store(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+function load(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function setLang(l){lang=l;document.documentElement.lang=l==='vi'?'vi':'en';
+ document.querySelectorAll('[data-i]').forEach(el=>el.textContent=T(UI[el.dataset.i]));
+ document.querySelectorAll('[data-l]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.l===l));
+ renderAxis();renderNodes();if(cur)show(cur);else overview();narr.innerHTML=playing?T(S[playing].n):T(UI.narr);store('omr-lang',l)}
+function curTheme(){const a=document.documentElement.dataset.theme;return a||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}
+function setTheme(t,save){document.documentElement.dataset.theme=t;if(save)store('omr-theme',t);syncTheme()}
+function syncTheme(){const t=curTheme();document.querySelectorAll('[data-t]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===t))}
+document.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>setLang(b.dataset.l));
+document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>setTheme(b.dataset.t,true));
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',syncTheme);
+const st=load('omr-theme');if(st==='light'||st==='dark')setTheme(st,false);else syncTheme();
+setLang(load('omr-lang')==='en'?'en':'vi');
+const vp=document.getElementById('vp');
+function fit(){const W=vp.clientWidth,H=vp.clientHeight,sc=Math.min(W/1280,H/800),Ws=W/sc,Hs=H/sc,ox=(Ws-1280)/2,oy=Math.max(0,(Hs-800)/2);
+ Object.assign(stage.style,{width:Ws+'px',height:Hs+'px',transform:'scale('+sc+')'});
+ ['top','flow','bot'].forEach(id=>document.getElementById(id).style.left=ox+'px');['top','flow'].forEach(id=>document.getElementById(id).style.top=oy+'px');document.getElementById('bot').style.top=(oy+756)+'px'}
+addEventListener('resize',fit);fit();
+const fsb=document.getElementById('fs');
+fsb.onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen()}catch(e){fsb.title=lang==='vi'?'Trình duyệt không cho phép toàn màn hình':'Fullscreen not available here'}};
+document.addEventListener('fullscreenchange',()=>setTimeout(fit,50));
+</script>
+</body>
+</html>
